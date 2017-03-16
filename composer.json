@@ -3,7 +3,7 @@
   "type": "library",
   "description": "Simple queue manager and task processor for PHP",
   "keywords": ["qutee", "job", "task", "worker", "background", "queue", "redis", "mysql", "beanstalkd"],
-  "homepage": "https://github.com/anorgan/qutee",
+  "homepage": "https://github.com/m-hume/qutee",
   "authors": [
     {"name": "Marin Crnković", "email": "marin.crnkovic@gmail.com"}
     {"name": "mhume"}
