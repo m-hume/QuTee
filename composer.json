@@ -1,5 +1,5 @@
 {
-  "name": "m-hume/qutee",
+  "name": "anorgan/qutee",
   "type": "library",
   "description": "Simple queue manager and task processor for PHP",
   "keywords": ["qutee", "job", "task", "worker", "background", "queue", "redis", "mysql", "beanstalkd"],
