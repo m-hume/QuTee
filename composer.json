@@ -12,9 +12,17 @@
 
   "minimum-stability": "dev",
 
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "https://github.com/anorgan/QuTee"
+    }
+  ],
+
   "require": {
     "php": ">=5.3.3",
-    "symfony/event-dispatcher": "~2.7"
+    "symfony/event-dispatcher": "~2.7",
+    "anorgan/QuTee": "dev-fork"
   },
 
   "require-dev": {
