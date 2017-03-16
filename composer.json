@@ -5,7 +5,7 @@
   "keywords": ["qutee", "job", "task", "worker", "background", "queue", "redis", "mysql", "beanstalkd"],
   "homepage": "https://github.com/m-hume/qutee",
   "authors": [
-    {"name": "Marin Crnković", "email": "marin.crnkovic@gmail.com"}
+    {"name": "Marin Crnković", "email": "marin.crnkovic@gmail.com"},
     {"name": "mhume"}
   ],
   "license": "LGPL-2.1+",
