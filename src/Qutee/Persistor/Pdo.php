@@ -7,7 +7,7 @@ use Qutee\Task;
 /**
  * PDO persistor, use table with columns: name, data, priority
  *
- * MySQL 
+ * MySQL
  CREATE TABLE IF NOT EXISTS `queue` (
     `id` INT NOT NULL AUTO_INCREMENT,
     `name` VARCHAR(255) NOT NULL,
@@ -30,13 +30,13 @@ class Pdo implements PersistorInterface
      * @var array
      */
     private $_options = array();
-    
+
     /**
      *
      * @var \PDO
      */
     private $_pdo;
-    
+
     /**
      *
      * @var int
@@ -44,7 +44,7 @@ class Pdo implements PersistorInterface
     private static $_reconnects = 3;
 
     /**
-     * 
+     *
      * @param \PDO $pdo
      */
     public function __construct(\PDO $pdo = null)
@@ -75,7 +75,7 @@ class Pdo implements PersistorInterface
     }
 
     /**
-     * 
+     *
      * @param \Qutee\Task $task
      *
      * @return \Qutee\Persistor\Pdo
@@ -87,7 +87,7 @@ class Pdo implements PersistorInterface
             return $this;
         }
 
-        $statement = $this->_getPdo()->prepare(sprintf(' 
+        $statement = $this->_getPdo()->prepare(sprintf('
             INSERT INTO %s
             SET
                 name        = :name,
@@ -95,6 +95,8 @@ class Pdo implements PersistorInterface
                 data        = :data,
                 priority    = :priority,
                 unique_id   = :unique_id,
+                delay_till  = :delay_till,
+                retries     = :retries,
                 created_at  = NOW()
         ', $this->_options['table_name']));
 
@@ -104,13 +106,15 @@ class Pdo implements PersistorInterface
             ':data'        => serialize($task),
             ':priority'    => $task->getPriority(),
             ':unique_id'   => $task->isUnique() ? $task->getUniqueId() : null,
+            ':delay_till'  => $task->getDelayTill() ? $task->getDelayTill() : null,
+						':retries'     => $task->getRetries(),
         ));
 
         return $this;
     }
 
     /**
-     * 
+     *
      * @param int $priority
      *
      * @return Task|null
@@ -118,7 +122,7 @@ class Pdo implements PersistorInterface
     public function getTask($priority = null)
     {
         $this->_getPdo()->exec('SET @ID = 0;');
-        
+
         // Update first task that is not taken as taken, taking its ID
         $statement = $this->_getPdo()->prepare(sprintf('
             UPDATE
@@ -129,12 +133,13 @@ class Pdo implements PersistorInterface
             WHERE
                 is_taken    = 0
                 %s
+              AND IFNULL(delay_till, now()) <= now()
             ORDER BY
                 created_at ASC
             LIMIT 1
         ', $this->_options['table_name'], $priority !== null ? 'AND priority = :priority' : ''));
         $array = null;
-        
+
         if ($priority !== null) {
             $array = array(':priority' => $priority);
         }
@@ -158,12 +163,12 @@ class Pdo implements PersistorInterface
     }
 
     /**
-     * 
+     *
      * @param int $priority
      *
      * @return Task[]
      */
-    public function getTasks($priority = null) 
+    public function getTasks($priority = null)
     {
         if ($priority !== null) {
             $array = array(':priority' => $priority);
@@ -176,7 +181,7 @@ class Pdo implements PersistorInterface
         ', $this->_options['table_name'], $priority !== null ? 'WHERE priority = :priority' : ''));
         $statement->execute($array);
         $tasks  = $statement->fetchAll(\PDO::FETCH_ASSOC);
-        
+
         foreach ($tasks as $k => $data) {
             $tasks[$k]  = unserialize($data['data']);
         }
@@ -193,19 +198,19 @@ class Pdo implements PersistorInterface
     }
 
     /**
-     * 
+     *
      * @param \PDO $pdo
      *
      * @return \Qutee\Persistor\Pdo
      */
     public function setPdo(\PDO $pdo) {
         $this->_pdo = $pdo;
-        
+
         return $this;
     }
 
     /**
-     * 
+     *
      * @return \PDO
      */
     protected function _getPdo()
@@ -216,7 +221,7 @@ class Pdo implements PersistorInterface
             $password   = $this->_options['password'];
 
             $options    = array(
-                \PDO::ATTR_EMULATE_PREPARES     => false, 
+                \PDO::ATTR_EMULATE_PREPARES     => false,
                 \PDO::ATTR_ERRMODE              => \PDO::ERRMODE_EXCEPTION,
                 \PDO::ATTR_DEFAULT_FETCH_MODE   => \PDO::FETCH_ASSOC
             );
@@ -232,7 +237,7 @@ class Pdo implements PersistorInterface
 
         return $this->_pdo;
     }
-    
+
     /**
      * Test connection, reconnect if needed
      *
@@ -261,9 +266,9 @@ class Pdo implements PersistorInterface
     }
 
     /**
-     * 
+     *
      * @param string $uniqueId
-     * 
+     *
      * @return boolean
      */
     protected function _hasTaskByUniqueId($uniqueId)
