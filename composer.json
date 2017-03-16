@@ -1,11 +1,12 @@
 {
-  "name": "anorgan/qutee",
+  "name": "m-hume/qutee",
   "type": "library",
   "description": "Simple queue manager and task processor for PHP",
   "keywords": ["qutee", "job", "task", "worker", "background", "queue", "redis", "mysql", "beanstalkd"],
   "homepage": "https://github.com/anorgan/qutee",
   "authors": [
     {"name": "Marin Crnković", "email": "marin.crnkovic@gmail.com"}
+    {"name": "mhume"}
   ],
   "license": "LGPL-2.1+",
 
