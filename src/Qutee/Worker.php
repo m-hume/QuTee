@@ -18,7 +18,7 @@ class Worker
      * Run every 5 seconds by default
      */
     const DEFAULT_INTERVAL = 5;
-    
+
     const EVENT_START_PROCESSING_TASK = 'qutee.worker.start_processing_task';
     const EVENT_END_PROCESSING_TASK = 'qutee.worker.end_processing_task';
 
@@ -143,21 +143,22 @@ class Worker
 
         // Get next task with set priority (or any task if priority not set)
         if (null === ($task = $this->getQueue()->getTask($this->getPriority()))) {
+            $this->_sleep();
             return;
         }
 
         $event = new Event($this);
         $event->setArgument('startTime', $this->_startTime);
         $event->setTask($task);
-        
+
         $this->getQueue()->getEventDispatcher()->dispatch(self::EVENT_START_PROCESSING_TASK, $event);
-        
+
         $this->_runTask($task);
-        
+
         $event = new Event($this);
         $event->setArgument('elapsedTime', $this->_getPassedTime());
         $event->setTask($task);
-        
+
         $this->getQueue()->getEventDispatcher()->dispatch(self::EVENT_END_PROCESSING_TASK, $event);
 
         // After working, sleep
@@ -212,16 +213,16 @@ class Worker
         }
 
         $taskObject     = new $taskClassName;
+        $methodName     = $task->getMethodName();
 
         if ($taskObject instanceof TaskInterface) {
 
             $taskObject->setData($task->getData());
-            $taskObject->run();
+            $taskObject->run($methodName, $task); // send the method name and instance of task
             return $taskObject;
 
         } else {
 
-            $methodName     = $task->getMethodName();
             $taskObject->$methodName($task->getData());
 
         }

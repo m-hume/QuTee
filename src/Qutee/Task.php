@@ -11,6 +11,8 @@ use Qutee\Queue;
  */
 class Task
 {
+    const EVENT_RECREATE_PROCESSING_TASK = 'qutee.task.recreate_processing_task';
+
     /**
      * Default name of the method to run the task
      */
@@ -60,6 +62,24 @@ class Task
      * @var string
      */
     protected $_uniqueId;
+
+    /**
+     *
+     * @var string
+     */
+    protected $_retryDelta;
+
+    /**
+     *
+     * @var string
+     */
+    protected $_delayTill;
+
+    /**
+     *
+     * @var int
+     */
+    protected $_retries = null;
 
     /**
      *
@@ -269,11 +289,92 @@ class Task
 
     /**
      *
+     * @return string
+     */
+    public function getDelayTill()
+    {
+        return $this->_delayTill;
+    }
+
+    /**
+     *
+     * @param string|integer $delayTill
+     *
+     * @return \Qutee\Task
+     */
+    public function setDelayTill($delayTill)
+    {
+        $time = is_int($delayTill) ? $delayTill : strtotime($delayTill);
+        $this->_delayTill = $time === false ? null : date('c' , $time);
+
+        return $this;
+    }
+
+    /**
+     *
+     * @return integer
+     */
+    public function getRetries()
+    {
+        return $this->_retries;
+    }
+
+    /**
+     *
+     * @param integer|null $retries
+     *
+     * @return \Qutee\Task
+     */
+    public function setRetries($retries)
+    {
+        $this->_retries = $retries === null ? null :(int)$retries;
+
+        return $this;
+    }
+
+    /**
+     *
+     * @return boolean
+     */
+    protected function _canRetry()
+    {
+        if($this->_retries === null){
+					return false;
+				}
+        return (--$this->_retries >= 0);
+
+    }
+
+    /**
+     *
+     * @return string
+     */
+    public function getRetryDelta()
+    {
+        return $this->_retryDelta;
+    }
+
+    /**
+     *
+     * @param string $retryDelta
+     *
+     * @return \Qutee\Task
+     */
+    public function setRetryDelta($retryDelta)
+    {
+        $time = strtotime($retryDelta);
+        $this->_retryDelta = $time === false ? null : $retryDelta;
+
+        return $this;
+    }
+
+    /**
+     *
      * @return array
      */
     public function __sleep()
     {
-        return array('_name', '_data', '_methodName', '_priority', '_uniqueId');
+        return array('_name', '_data', '_methodName', '_priority', '_uniqueId', '_delayTill', '_retries', '_retryDelta');
     }
 
     /**
@@ -294,5 +395,47 @@ class Task
         $queue->addTask($task);
 
         return $task;
+    }
+
+    /**
+     *
+     * @param Task $task is the task you'd like to recreate
+     *
+     * @return Task
+     */
+//    public static function reCreate(Task $task)
+    public function reCreate()
+    {
+//var_dump($this);
+				if(!$this->_canRetry()) {
+					return false;
+				}
+				$delay_till = $this->getDelayTill();
+				if(!($delay_till && strtotime($delay_till)>=time())){ // no fututre delay_till
+					$retry_delta = $this->getRetryDelta();
+					if($retry_delta){
+						$this->setDelayTill($retry_delta);
+					}
+				}
+
+        $queue  = Queue::get();
+        $queue->addTask($this, true);
+
+        return true;
+//				if(!$task->_canRetry()) {
+//					return $task;
+//				}
+//				$delay_till = $task->getDelayTill();
+//				if(!($delay_till && strtotime($delay_till)>=time())){ // no fututre delay_till
+//					$retry_delta = $task->getRetryDelta();
+//					if($retry_delta){
+//						$task->setDelayTill($retry_delta);
+//					}
+//				}
+//
+//        $queue  = Queue::get();
+//        $queue->addTask($task);
+//
+//        return $task;
     }
 }
