@@ -54,6 +54,14 @@ class Pdo implements PersistorInterface
 
     /**
      *
+     */
+    public function __destruct()
+    {
+        $this->_pdo = null;
+    }
+
+    /**
+     *
      * @return array
      */
     public function getOptions()
@@ -80,10 +88,10 @@ class Pdo implements PersistorInterface
      *
      * @return \Qutee\Persistor\Pdo
      */
-    public function addTask(Task $task)
+    public function addTask(Task $task, $force=false)
     {
         // Check if the task is unique and already exists
-        if ($task->isUnique() && $this->_hasTaskByUniqueId($task->getUniqueId())) {
+        if ($task->isUnique() && $this->_hasTaskByUniqueId($task->getUniqueId()) && $force==false) {
             return $this;
         }
 
@@ -107,9 +115,42 @@ class Pdo implements PersistorInterface
             ':priority'    => $task->getPriority(),
             ':unique_id'   => $task->isUnique() ? $task->getUniqueId() : null,
             ':delay_till'  => $task->getDelayTill() ? $task->getDelayTill() : null,
-						':retries'     => $task->getRetries(),
+            ':retries'     => $task->getRetries(),
         ));
 
+        return $this;
+    }
+
+    /**
+     *
+     * @param \Qutee\Task $task
+     *
+     * @return \Qutee\Persistor\Pdo
+     */
+    public function clearTask(Task $task, $is_taken=false)
+    {
+        if($task->isUnique()){
+            $statement = $this->_getPdo()->prepare(sprintf('
+                DELETE FROM %s WHERE unique_id=:unique_id%s;',
+                $this->_options['table_name'],
+                ($is_taken?'':' AND is_taken=0')
+            ));
+            $statement->execute(array(
+                ':unique_id' => $task->getUniqueId()
+            ));
+        }
+        else
+        {
+            $statement = $this->_getPdo()->prepare(sprintf('
+                DELETE FROM %s WHERE name=:name AND method_name=:method_name%s;',
+                $this->_options['table_name'],
+                ($is_taken?'':' AND is_taken=0')
+            ));
+            $statement->execute(array(
+                ':name' => $task->getName(),
+                ':method_name' => $task->getMethodName()
+            ));
+        }
         return $this;
     }
 
@@ -245,7 +286,7 @@ class Pdo implements PersistorInterface
      *
      * @throws \Qutee\Persistor\PDOException
      */
-    protected function _testConnection(\PDO $pdo)
+    protected function _testConnection(\PDO &$pdo)
     {
         try {
             // Dummy query
@@ -253,14 +294,21 @@ class Pdo implements PersistorInterface
         } catch (\PDOException $e) {
             // Mysql server has gone away or similar error
             self::$_reconnects--;
-
+            //ob_start(); debug_print_backtrace(); error_log('debug_print_backtrace() No PDO connection. $_reconnects:'.self::$_reconnects . PHP_EOL . ob_get_contents()); ob_end_clean();
             if (self::$_reconnects <= 0) {
+                error_log('No PDO connection. ' . $e->getMessage() );
                 // No more tests, throw error, reinstate reconnects
                 self::$_reconnects = 3;
+                $this->_pdo = null;
                 throw $e;
             }
 
+//            $this->_pdo = null;
             $pdo = null;
+            if(!is_null($this->_pdo)){
+              error_log('$this->_pdo not null!!!');
+              //$this->_pdo = null;
+            }
             $this->_getPdo();
         }
     }
