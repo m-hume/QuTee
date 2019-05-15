@@ -33,7 +33,16 @@ interface PersistorInterface
      *
      * @return PersistorInterface
      */
-    public function addTask(\Qutee\Task $task);
+    public function addTask(\Qutee\Task $task, $force=false);
+
+    /**
+     * Clear task from the queue
+     *
+     * @param \Qutee\Task $task
+     *
+     * @return PersistorInterface
+     */
+    public function clearTask(\Qutee\Task $task, $is_taken=false);
 
     /**
      * Get next task from the queue
