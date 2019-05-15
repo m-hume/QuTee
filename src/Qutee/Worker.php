@@ -30,6 +30,13 @@ class Worker
     protected $_interval = self::DEFAULT_INTERVAL;
 
     /**
+     * Run every X seconds
+     *
+     * @var int
+     */
+    protected $_maxRunTime = false;
+
+    /**
      * Do only tasks with this priority or all if priority is null
      *
      * @var int
@@ -46,6 +53,12 @@ class Worker
      *
      * @var float
      */
+    protected $_workerStartTime;
+
+    /**
+     *
+     * @var float
+     */
     protected $_startTime;
 
     /**
@@ -53,6 +66,19 @@ class Worker
      * @var float
      */
     protected $_passedTime;
+
+    /**
+     *
+     * @var
+     */
+    protected $_shmop = null;
+
+    public function __construct() {
+      $this->_workerStartTime = microtime(true);
+      if(class_exists('\OScom\Shmop')){
+        $this->_shmop = new \OScom\Shmop();
+      }
+    }
 
     /**
      *
@@ -72,6 +98,28 @@ class Worker
     public function setInterval($interval)
     {
         $this->_interval = $interval;
+
+        return $this;
+    }
+
+    /**
+     *
+     * @return int|false
+     */
+    public function getMaxRunTime()
+    {
+        return $this->_maxRunTime;
+    }
+
+    /**
+     *
+     * @param int $maxRunTime
+     *
+     * @return Worker
+     */
+    public function setMaxRunTime($maxRunTime)
+    {
+        $this->_maxRunTime = $maxRunTime;
 
         return $this;
     }
@@ -186,6 +234,16 @@ class Worker
     }
 
     /**
+     * Get passed time
+     *
+     * @return float
+     */
+    protected function _getTotalPassedTime()
+    {
+        return abs(microtime(true) - $this->_workerStartTime);
+    }
+
+    /**
      * Sleep
      *
      * @return null
@@ -194,9 +252,24 @@ class Worker
     {
         // Time ... enough
         if ($this->_getPassedTime() <= $this->_interval) {
-            $remainder = ($this->_interval) - $this->_getPassedTime();
-            usleep($remainder * 1000000);
+            for( $remainder = ($this->_interval - $this->_getPassedTime()); $remainder > 0; $remainder--){
+              if($this->getMaxRunTime() && $this->_getTotalPassedTime() > $this->getMaxRunTime()){
+                //max run time is up
+                return;
+              }
+              if($this->_shmop){// if we have our shmop class
+                $procs = $this->_shmop->getProcs();
+                if( ($proc = $procs[getmypid()]) && isset($proc['j']) && $proc['j'] ){
+                  //remove the job flag and return early to run job
+                  $this->_shmop->setProc(['j'=>false]);
+                  return;
+                }
+              }
+              $sleep_for = ($remainder > 1) ? 1 : $remainder;
+              usleep($sleep_for * 1000000);
+            }
         } // Task took more than the interval, don't sleep
+        return;
     }
 
     /**
