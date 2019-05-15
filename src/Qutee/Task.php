@@ -19,6 +19,11 @@ class Task
     const DEFAULT_METHOD_NAME   = 'run';
 
     /**
+     * Test priority
+     */
+    const PRIORITY_TEST         = 0;
+
+    /**
      * Low priority
      */
     const PRIORITY_LOW          = 1;
@@ -80,6 +85,18 @@ class Task
      * @var int
      */
     protected $_retries = null;
+
+    /**
+     *
+     * @var int
+     */
+    protected $_origRetries = null;
+
+    /**
+     *
+     * @var string
+     */
+    protected $_lastError = '';
 
     /**
      *
@@ -178,6 +195,27 @@ class Task
         }
 
         $this->_methodName = $methodName;
+
+        return $this;
+    }
+
+    /**
+     *
+     * @return string
+     */
+    public function getLastError()
+    {
+        return $this->_lastError;
+    }
+
+    /**
+     *
+     * @param string $error
+     * @return \Qutee\Task
+     */
+    public function setLastError($error)
+    {
+        $this->_lastError = $error;
 
         return $this;
     }
@@ -321,13 +359,22 @@ class Task
 
     /**
      *
+     * @return integer
+     */
+    public function getOriginalRetries()
+    {
+        return $this->_origRetries;
+    }
+
+    /**
+     *
      * @param integer|null $retries
      *
      * @return \Qutee\Task
      */
     public function setRetries($retries)
     {
-        $this->_retries = $retries === null ? null :(int)$retries;
+        $this->_origRetries = $this->_retries = (($retries === null) ? null :(int)$retries);
 
         return $this;
     }
@@ -339,8 +386,8 @@ class Task
     protected function _canRetry()
     {
         if($this->_retries === null){
-					return false;
-				}
+          return false;
+        }
         return (--$this->_retries >= 0);
 
     }
@@ -374,7 +421,7 @@ class Task
      */
     public function __sleep()
     {
-        return array('_name', '_data', '_methodName', '_priority', '_uniqueId', '_delayTill', '_retries', '_retryDelta');
+        return array('_name', '_data', '_methodName', '_priority', '_uniqueId', '_delayTill', '_retries', '_origRetries', '_retryDelta');
     }
 
     /**
@@ -404,38 +451,40 @@ class Task
      * @return Task
      */
 //    public static function reCreate(Task $task)
-    public function reCreate()
+    public function reCreate($force = false)
     {
 //var_dump($this);
-				if(!$this->_canRetry()) {
-					return false;
-				}
-				$delay_till = $this->getDelayTill();
-				if(!($delay_till && strtotime($delay_till)>=time())){ // no fututre delay_till
-					$retry_delta = $this->getRetryDelta();
-					if($retry_delta){
-						$this->setDelayTill($retry_delta);
-					}
-				}
+        if(!$this->_canRetry()) {
+          return false;
+        }
+        $delay_till = $this->getDelayTill();
+        if(!($delay_till && strtotime($delay_till)>=time())){ // no fututre delay_till
+          $retry_delta = $this->getRetryDelta();
+          if($retry_delta){
+            $this->setDelayTill($retry_delta);
+          }
+        }
 
         $queue  = Queue::get();
-        $queue->addTask($this, true);
+        $queue->addTask($this, $force, true);
 
         return true;
-//				if(!$task->_canRetry()) {
-//					return $task;
-//				}
-//				$delay_till = $task->getDelayTill();
-//				if(!($delay_till && strtotime($delay_till)>=time())){ // no fututre delay_till
-//					$retry_delta = $task->getRetryDelta();
-//					if($retry_delta){
-//						$task->setDelayTill($retry_delta);
-//					}
-//				}
-//
-//        $queue  = Queue::get();
-//        $queue->addTask($task);
-//
-//        return $task;
+    }
+
+    /**
+     *
+     * @param Task $task is the task you'd like to recreate
+     *
+     * @return Task
+     */
+    public function reSchedule($force = false)
+    {
+//var_dump($this);
+
+        $queue  = Queue::get();
+        $this->setRetries($this->_origRetries);
+        $queue->addTask($this, $force, false);
+
+        return true;
     }
 }
