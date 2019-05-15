@@ -12,6 +12,9 @@ use Qutee\Task;
 class Queue
 {
     const EVENT_ADD_TASK = 'qutee.queue.add_task';
+    const EVENT_LOG = 'qutee.queue.event_log';
+    const EVENT_WARN = 'qutee.queue.event_warn';
+    const EVENT_ERROR = 'qutee.queue.event_error';
     const EVENT_CLEAR_ALL_TASKS = 'qutee.queue.clear_all_tasks';
 
     /**
@@ -89,14 +92,37 @@ class Queue
      *
      * @return \Qutee\Queue
      */
-    public function addTask(Task $task, $retry=false)
+    public function clearTask(Task $task)
     {
-        $this->getPersistor()->addTask($task);
+        $this->getPersistor()->clearTask($task);
+
+        return $this;
+    }
+
+    /**
+     *
+     * @param \Qutee\Task $task
+     *
+     * @return \Qutee\Queue
+     */
+    public function addTask(Task $task, $force=false, $retry=false)
+    {
+        $this->getPersistor()->addTask($task, $force);
 
         $event = new Event($this);
-				$event->setArgument('isRetry', $retry);
+        $event->setArgument('isRetry', $retry);
         $event->setTask($task);
-
+        if(class_exists('\OScom\Shmop')){// if we have our shmop class
+          $shmop = new \OScom\Shmop();
+          foreach($shmop->getProcs() as $pid => $proc){
+            if($task->getPriority() == $proc['p']){
+              // if proc of correct priority exists, set its job flag
+              $shmop->setProc(['j'=>true], $pid);
+              break;
+            }
+          }
+        }
+//var_dump($task);
         $this->getEventDispatcher()->dispatch(self::EVENT_ADD_TASK, $event);
 
         return $this;
