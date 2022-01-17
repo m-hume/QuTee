@@ -27,6 +27,15 @@ interface PersistorInterface
     public function getOptions();
 
     /**
+     * reschedule a pre-existing task
+     *
+     * @param \Qutee\Task $name
+     *
+     * @return PersistorInterface
+     */
+    public function rescheduleTask(\Qutee\Task $task);
+
+    /**
      * Add task to the queue
      *
      * @param \Qutee\Task $name
