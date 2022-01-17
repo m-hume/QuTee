@@ -55,7 +55,7 @@ class Pdo implements PersistorInterface
     /**
      *
      */
-    public function __destruct()
+		public function __destruct()
     {
         $this->_pdo = null;
     }
@@ -117,6 +117,44 @@ class Pdo implements PersistorInterface
             ':delay_till'  => $task->getDelayTill() ? $task->getDelayTill() : null,
             ':retries'     => $task->getRetries(),
         ));
+
+        return $statement->rowCount();
+    }
+
+    /**
+     *
+     * @param \Qutee\Task $task
+     *
+     * @return \Qutee\Persistor\Pdo
+     */
+    public function rescheduleTask(\Qutee\Task $task)
+    {
+
+        // Check if the task is unique and already exists
+        if ( ($task->isUnique() && $this->_hasTaskByUniqueId($task->getUniqueId())) === false ) {
+            return $this;
+        }
+
+        // Update first task that is not taken as taken, taking its ID
+        $statement = $this->_getPdo()->prepare(sprintf('
+            UPDATE
+                %s
+            SET
+                delay_till  = :delay_till
+            WHERE
+                is_taken    = 0
+                AND unique_id = :unique_id;
+        ', $this->_options['table_name']));
+
+        $statement->execute(array(
+            ':delay_till'  => $task->getDelayTill(),
+            ':unique_id'   => $task->getUniqueId()
+        ));
+
+        if ($statement->rowCount() === 0) {
+            // No tasks
+            return null;
+        }
 
         return $this;
     }
@@ -294,21 +332,21 @@ class Pdo implements PersistorInterface
         } catch (\PDOException $e) {
             // Mysql server has gone away or similar error
             self::$_reconnects--;
-            //ob_start(); debug_print_backtrace(); error_log('debug_print_backtrace() No PDO connection. $_reconnects:'.self::$_reconnects . PHP_EOL . ob_get_contents()); ob_end_clean();
+						//ob_start(); debug_print_backtrace(); error_log('debug_print_backtrace() No PDO connection. $_reconnects:'.self::$_reconnects . PHP_EOL . ob_get_contents()); ob_end_clean();
             if (self::$_reconnects <= 0) {
-                error_log('No PDO connection. ' . $e->getMessage() );
+								error_log('No PDO connection. ' . $e->getMessage() );
                 // No more tests, throw error, reinstate reconnects
                 self::$_reconnects = 3;
-                $this->_pdo = null;
+								$this->_pdo = null;
                 throw $e;
             }
 
-//            $this->_pdo = null;
+//						$this->_pdo = null;
             $pdo = null;
-            if(!is_null($this->_pdo)){
-              error_log('$this->_pdo not null!!!');
-              //$this->_pdo = null;
-            }
+						if(!is_null($this->_pdo)){
+							error_log('$this->_pdo not null!!!');
+							//$this->_pdo = null;
+						}
             $this->_getPdo();
         }
     }
