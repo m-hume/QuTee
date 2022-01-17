@@ -107,21 +107,23 @@ class Queue
      */
     public function addTask(Task $task, $force=false, $retry=false)
     {
-        $this->getPersistor()->addTask($task, $force);
+        if( $this->getPersistor()->addTask($task, $force) !== 1 ){
+					$this->getPersistor()->rescheduleTask($task);
+				}
 
         $event = new Event($this);
         $event->setArgument('isRetry', $retry);
         $event->setTask($task);
-        if(class_exists('\OScom\Shmop')){// if we have our shmop class
-          $shmop = new \OScom\Shmop();
-          foreach($shmop->getProcs() as $pid => $proc){
-            if($task->getPriority() == $proc['p']){
-              // if proc of correct priority exists, set its job flag
-              $shmop->setProc(['j'=>true], $pid);
-              break;
-            }
-          }
-        }
+				if(class_exists('\OScom\Shmop')){// if we have our shmop class
+					$shmop = new \OScom\Shmop();
+					foreach($shmop->getProcs() as $pid => $proc){
+						if($task->getPriority() == $proc['p']){
+							// if proc of correct priority exists, set its job flag
+							$shmop->setProc(['j'=>true], $pid);
+							break;
+						}
+					}
+				}
 //var_dump($task);
         $this->getEventDispatcher()->dispatch(self::EVENT_ADD_TASK, $event);
 
