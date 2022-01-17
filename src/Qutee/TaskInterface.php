@@ -59,9 +59,11 @@ class TaskInterface
       if($this->_task){
         $schedule = (bool)$schedule ? $schedule : static::schedule();
         $schedule = is_integer($schedule) ? $schedule : self::nextTime($schedule);
+				if(!empty($data)){
+					$this->_task->setData($data);
+				}
         $this->_task
           ->setDelayTill($schedule)
-          ->setData($data)
           ->reSchedule()
         ;
         return $this->_task->getDelayTill();
@@ -112,6 +114,7 @@ class TaskInterface
         $this->_task->setLastError($message);
       }
       self::log($message, Queue::EVENT_ERROR);
+			return $message;
     }
 
 //    public static function nextTime($time, $iterator='day', $base=null){
@@ -146,6 +149,26 @@ class TaskInterface
         ){
         // concat the time back on as $iterator='weekday' looses the time
         $datetime = strtotime('+1 '.$iterator.' '.date('H:i:s', $datetime), $datetime);
+      }
+      return $datetime;
+    }
+    public static function prevTime($time, $iterator='day', $base=null){
+      $iterators = ['day', 'week', 'weekday', 'workday', 'month', 'year'];
+      if(!in_array(strtolower($iterator), $iterators)){
+        throw new \Exception('Bad iterator passed to '.__METHOD__.' accepts '.implode(',', $iterators));
+      }
+      $base = is_integer($base) ? $base : time();
+      $datetime = strtotime($time, $base);
+
+      $workday = $iterator == 'workday';
+      $iterator = $workday ? 'day' : $iterator;
+
+      while($datetime > $base // datetime in future
+        || date('Ymd', $datetime) != date('Ymd', strtotime('+0 '.$iterator, $datetime)) // datetime not an iterator (not a weekend when $iterator='weekday')
+        || ($workday && date('l', $datetime) == 'Sunday') // workday is specified and its a sunday
+        ){
+        // concat the time back on as $iterator='weekday' looses the time
+        $datetime = strtotime('-1 '.$iterator.' '.date('H:i:s', $datetime), $datetime);
       }
       return $datetime;
     }
