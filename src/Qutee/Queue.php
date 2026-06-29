@@ -163,7 +163,7 @@ class Queue
 
             $event = new Event($this);
 
-            $this->getEventDispatcher()->dispatch(self::EVENT_CLEAR_ALL_TASKS, $event);
+            $this->getEventDispatcher()->dispatch($event, self::EVENT_CLEAR_ALL_TASKS);
             return true;
         }
 
