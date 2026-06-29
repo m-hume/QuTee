@@ -95,7 +95,7 @@ class TaskInterface
         $event = new Event($this);
         $event->setTask($this->_task);
         $event->setArgument('toLog', $message);
-        $this->_queue->getEventDispatcher()->dispatch($level, $event);
+        $this->_queue->getEventDispatcher()->dispatch($event, $level);
       }
       else{
         echo $message . PHP_EOL;
