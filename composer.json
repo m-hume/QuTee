@@ -14,7 +14,7 @@
 
   "require": {
     "php": ">=5.3.3",
-    "symfony/event-dispatcher": "~2.7"
+    "symfony/event-dispatcher": "~2.7|^4.4|^5.0|^6.0"
   },
 
   "require-dev": {
