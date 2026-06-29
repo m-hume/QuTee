@@ -199,7 +199,7 @@ class Worker
         $event->setArgument('startTime', $this->_startTime);
         $event->setTask($task);
 
-        $this->getQueue()->getEventDispatcher()->dispatch(self::EVENT_START_PROCESSING_TASK, $event);
+        $this->getQueue()->getEventDispatcher()->dispatch($event, self::EVENT_START_PROCESSING_TASK);
 
         $this->_runTask($task);
 
@@ -207,7 +207,7 @@ class Worker
         $event->setArgument('elapsedTime', $this->_getPassedTime());
         $event->setTask($task);
 
-        $this->getQueue()->getEventDispatcher()->dispatch(self::EVENT_END_PROCESSING_TASK, $event);
+        $this->getQueue()->getEventDispatcher()->dispatch($event, self::EVENT_END_PROCESSING_TASK);
 
         // After working, sleep
         $this->_sleep();
