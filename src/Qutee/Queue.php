@@ -125,7 +125,7 @@ class Queue
 					}
 				}
 //var_dump($task);
-        $this->getEventDispatcher()->dispatch(self::EVENT_ADD_TASK, $event);
+        $this->getEventDispatcher()->dispatch($event, self::EVENT_ADD_TASK);
 
         return $this;
     }
