@@ -46,7 +46,7 @@ class TaskInterface
       //print_r($this->_task);
       $methodName = ltrim($methodName, ' _');
       if (method_exists($this, $methodName)) {
-        return call_user_func_array(array($this, $methodName), $this->_data);
+        return call_user_func_array(array($this, $methodName), array_values($this->_data));
       }
 
       return false;
